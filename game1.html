@@ -119,8 +119,7 @@
     </div>
     <div id="win-pop" class="modal" style="border-color: var(--gold);"><h1 id="winner-name" style="color:var(--gold); font-size:45px;"></h1><button onclick="location.reload()">NEW GAME</button></div>
 
-    <script>
-        /* ... (변수 및 리롤 데이터 저장 로직 동일) ... */
+   <script>
         const canvas = document.getElementById('lotto');
         const ctx = canvas.getContext('2d');
         const scrollBox = document.getElementById('scroll-container');
@@ -131,18 +130,53 @@
         let currentRerolls = parseInt(localStorage.getItem('lotto_rerolls')) || 3;
         document.getElementById('rerollCount').value = currentRerolls;
 
-        /* ... (Ball 클래스 및 데이터 로딩 로직 동일) ... */
-        function useReroll() { if(currentRerolls > 0) { currentRerolls--; localStorage.setItem('lotto_rerolls', currentRerolls); document.getElementById('rerollCount').value = currentRerolls; resetTimer(); if(isPaused) closeJudge(); } }
-        function loadData() { const raw = document.getElementById('rawText').value; const lines = raw.split('\n').filter(l => l.trim() !== ""); let temp = []; lines.forEach(l => { let name = l.trim(); let count = 1; if(l.includes('*')) { const p = l.split('*'); name = p[0].trim(); count = parseInt(p[1])||1; } for(let i=0; i<count; i++) temp.push(new Ball(name, temp.length)); }); balls = temp; renderList(); updateStatus(); }
-        function saveData() { localStorage.setItem('lotto_v19_7_text', document.getElementById('rawText').value); }
-        window.onload = () => { const t = localStorage.getItem('lotto_v19_7_text'); if(t){ document.getElementById('rawText').value=t; loadData(); } };
-
+        // --- [1] 함수 및 클래스 정의 (선언부) ---
+        
         class Ball {
-            constructor(txt, id) { this.txt = txt; this.id = id; this.r = 16; this.x = 400 + (Math.random()-0.5)*500; this.y = 400 + (Math.random()-0.5)*500; this.vx = (Math.random()-0.5)*18; this.vy = (Math.random()-0.5)*18; this.color = `hsl(${Math.random()*360}, 85%, 60%)`; this.isOut = false; this.isExiting = false; }
-            draw() { if(this.isOut && !this.isExiting) return; ctx.save(); ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill(); ctx.strokeStyle = "white"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#000"; ctx.font = "bold 10px Arial"; ctx.textAlign="center"; ctx.fillText(this.id + 1, this.x, this.y + 4); ctx.restore(); }
-            update() { if(isPaused || (this.isOut && !this.isExiting)) return; if(this.isExiting) { this.vx += (400-this.x)*0.3; this.vy += (-550-this.y)*0.3; } this.x += this.vx; this.y += this.vy; if(Math.hypot(this.x-400, this.y-400) > 390-this.r && !this.isExiting) { const a = Math.atan2(this.y-400, this.x-400); this.vx = -Math.cos(a)*18; this.vy = -Math.sin(a)*18; } }
+            constructor(txt, id) { 
+                this.txt = txt; this.id = id; this.r = 16; 
+                this.x = 400 + (Math.random()-0.5)*500; 
+                this.y = 400 + (Math.random()-0.5)*500; 
+                this.vx = (Math.random()-0.5)*18; 
+                this.vy = (Math.random()-0.5)*18; 
+                this.color = `hsl(${Math.random()*360}, 85%, 60%)`; 
+                this.isOut = false; this.isExiting = false; 
+            }
+            draw() { 
+                if(this.isOut && !this.isExiting) return; 
+                ctx.save(); ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); 
+                ctx.fillStyle = this.color; ctx.fill(); ctx.strokeStyle = "white"; 
+                ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#000"; 
+                ctx.font = "bold 10px Arial"; ctx.textAlign="center"; 
+                ctx.fillText(this.id + 1, this.x, this.y + 4); ctx.restore(); 
+            }
+            update() { 
+                if(isPaused || (this.isOut && !this.isExiting)) return; 
+                if(this.isExiting) { this.vx += (400-this.x)*0.3; this.vy += (-550-this.y)*0.3; } 
+                this.x += this.vx; this.y += this.vy; 
+                if(Math.hypot(this.x-400, this.y-400) > 390-this.r && !this.isExiting) { 
+                    const a = Math.atan2(this.y-400, this.x-400); 
+                    this.vx = -Math.cos(a)*18; this.vy = -Math.sin(a)*18; 
+                } 
+            }
         }
 
+        function loadData() { 
+            const raw = document.getElementById('rawText').value; 
+            const lines = raw.split('\n').filter(l => l.trim() !== ""); 
+            let temp = []; 
+            lines.forEach(l => { 
+                let name = l.trim(); let count = 1; 
+                if(l.includes('*')) { const p = l.split('*'); name = p[0].trim(); count = parseInt(p[1])||1; } 
+                for(let i=0; i<count; i++) temp.push(new Ball(name, temp.length)); 
+            }); 
+            balls = temp; renderList(); updateStatus(); 
+        }
+
+        function saveData() { localStorage.setItem('lotto_v19_7_text', document.getElementById('rawText').value); }
+        
+        function useReroll() { if(currentRerolls > 0) { currentRerolls--; localStorage.setItem('lotto_rerolls', currentRerolls); document.getElementById('rerollCount').value = currentRerolls; resetTimer(); if(isPaused) closeJudge(); } }
+        
         async function runSurvival() {
             if(isRunning) return; isRunning = true;
             const step = async () => {
@@ -171,30 +205,23 @@
                     const win = balls.find(b => !b.isOut);
                     document.getElementById('winner-name').innerText = `🏆 WINNER: ${win.txt} (#${win.id+1})`;
                     document.getElementById('win-pop').style.display = 'block';
-                    // 지옥의 문 트리거 (2초 대기 후 극강 연출)
                     if(!isHellUsed && Math.random() < 1.1) setTimeout(triggerHellMode, 5000);
                 }
             };
             step();
         }
 
-        /* ... (공통 함수들 동일) ... */
         function finalize(ball) { ball.isExiting = true; setTimeout(() => { ball.isOut = true; ball.isExiting = false; const el = document.getElementById(`item-${ball.id}`); if(el) { el.classList.remove('tracked'); el.classList.add('out'); } updateStatus(); }, 300); }
         async function triggerDiceRevive() { isPaused = true; const deads = balls.filter(b => b.isOut); if(deads.length === 0) { isPaused = false; return; } document.getElementById('dice-pop').style.display = 'block'; for(let i=0; i<15; i++) { document.getElementById('dice-number').innerText = deads[Math.floor(Math.random()*deads.length)].id + 1; await new Promise(r => setTimeout(r, 100)); } const final = deads[Math.floor(Math.random()*deads.length)]; document.getElementById('dice-number').innerText = final.id + 1; document.getElementById('dice-msg').innerText = `${final.txt}님 부활!`; await new Promise(r => setTimeout(r, 2000)); final.isOut=false; final.isExiting=false; final.x=400; final.y=400; document.getElementById('dice-pop').style.display='none'; isPaused=false; updateStatus(); renderList(); }
         function triggerJudgement() { isPaused = true; document.getElementById('judgement-pop').style.display = 'block'; if(judgeInterval) clearInterval(judgeInterval); judgeInterval = setInterval(() => { if(timeLeft > 0) { timeLeft--; updateTimeDisplay(); } else { closeJudge(); } }, 1000); }
         function approveRevive() { const id = parseInt(document.getElementById('judge-input').value)-1; const b = balls.find(x => x.id === id); if(b && b.isOut) { b.isOut=false; b.isExiting=false; b.x=400; b.y=400; closeJudge(); updateStatus(); renderList(); } }
         function closeJudge() { document.getElementById('judgement-pop').style.display='none'; isPaused=false; clearInterval(judgeInterval); }
-
-        // [핵심 수정] 50배 강한 대지진 연출
+        
         function triggerHellMode() {
-            isHellUsed = true; 
-            document.getElementById('win-pop').style.display = 'none';
-            
-            // 공포 연출 시작 (body에 섬광, container에 미친 흔들림)
+            isHellUsed = true; document.getElementById('win-pop').style.display = 'none';
             document.body.classList.add('hell-mode');
             document.getElementById('container').classList.add('hell-mode-active');
             document.getElementById('hell-warning').style.display = 'block';
-            
             setTimeout(() => {
                 const deads = balls.filter(b => b.isOut);
                 const count = Math.min(Math.floor(Math.random()*9)+2, deads.length);
@@ -202,17 +229,13 @@
                     const rb = deads.splice(Math.floor(Math.random()*deads.length), 1)[0];
                     rb.isOut=false; rb.isExiting=false; rb.x=400; rb.y=400;
                 }
-                
-                // 공포 연출 종료
                 document.body.classList.remove('hell-mode');
                 document.getElementById('container').classList.remove('hell-mode-active');
                 document.getElementById('hell-warning').style.display = 'none';
-                
                 updateStatus(); renderList(); runSurvival();
-            }, 5000); // 5초간 미친 듯이 흔들림
+            }, 5000);
         }
 
-        /* ... (타이머 및 ani 함수 동일) ... */
         function startTimer() { if(!timerInterval) timerInterval = setInterval(() => { if(timeLeft > 0 && !isPaused) { timeLeft--; updateTimeDisplay(); } }, 1000); }
         function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
         function resetTimer() { stopTimer(); timeLeft = parseInt(document.getElementById('timerMin').value)*60; updateTimeDisplay(); }
@@ -221,7 +244,30 @@
         function renderList() { scrollBox.innerHTML = balls.map(b => `<div class="item ${b.isOut?'out':''}" id="item-${b.id}"><span>#${b.id+1} ${b.txt}</span></div>`).join(''); }
         function updateStatus() { document.getElementById('count-left').innerText = balls.filter(b => !b.isOut).length; }
         function ani() { ctx.clearRect(0,0,800,800); balls.forEach(b => { b.update(); b.draw(); }); requestAnimationFrame(ani); }
-        ani();
+
+        // --- [2] 실행부 및 이벤트 리스너 (최하단 배치) ---
+
+        window.onload = () => { 
+            const t = localStorage.getItem('lotto_v19_7_text'); 
+            if(t){ document.getElementById('rawText').value=t; loadData(); } 
+        };
+
+        // 수집기 실시간 연동 리스너 (모든 함수가 정의된 후 등록)
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'UPDATE_LIST') {
+                const textArea = document.getElementById('rawText');
+                if (textArea) {
+                    textArea.value = e.data.data;
+                    // 함수 존재 여부 확인 후 안전하게 실행
+                    if (typeof loadData === 'function' && typeof saveData === 'function') {
+                        loadData(); 
+                        saveData();
+                    }
+                }
+            }
+        });
+
+        ani(); // 애니메이션 루프 시작
     </script>
 </body>
 </html>
