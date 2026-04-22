@@ -171,31 +171,42 @@
             document.getElementById(id).appendChild(d);
         }
 
-        window.addEventListener('keydown', e => {
+       window.addEventListener('keydown', e => {
+    // 1. 브라우저 및 확장 프로그램의 간섭 차단 (중요!)
+    // 키보드 위치값(KeyA, KeyS 등)을 직접 체크해서 브라우저가 가로채지 못하게 합니다.
+    if(["KeyQ", "KeyW", "KeyE", "KeyR", "KeyA", "KeyS", "KeyD", "KeyF", "Space"].includes(e.code)) {
+        e.preventDefault(); 
+    }
+
     if (!gameActive) return;
-    const char = e.key.toUpperCase();
+
+    // 2. 한/영 상태에 무관하게 '물리적 위치'로 키 인식하기
+    // e.key 대신 e.code를 사용하면 'ㅁ'을 누르든 'A'를 누르든 똑같이 'KeyA'로 인식합니다.
+    const codeMap = {
+        'KeyQ': 'Q', 'KeyW': 'W', 'KeyE': 'E', 'KeyR': 'R',
+        'KeyA': 'A', 'KeyS': 'S', 'KeyD': 'D', 'KeyF': 'F'
+    };
+    
+    const char = codeMap[e.code]; // 누른 키의 물리적 위치를 문자로 변환
     let keyList = currentMode.startsWith('Loa') ? keySets['Loa'] : keySets['Normal_8'];
     
-    if (keyList.includes(char)) {
+    if (char && keyList.includes(char)) {
         const currentKeyElement = document.getElementById('user-keys').children[uIdx];
         
         if (char === gameKeys[uIdx]) {
-            // 맞았을 때: 초록색
             currentKeyElement.classList.add('hit');
             uIdx++;
             if (uIdx === gameKeys.length) finish('user', "성공!");
         } else {
-            // 틀렸을 때: 화면 흔들기 대신 빨간색 표시
             if (currentKeyElement) {
                 currentKeyElement.classList.add('fail');
-                // 0.2초 후에 빨간색 제거 (번쩍이는 효과)
                 setTimeout(() => {
                     currentKeyElement.classList.remove('fail');
                 }, 200);
             }
         }
     }
-});
+}, false);
 
         function startAI(speed) {
             if (!gameActive) return;
