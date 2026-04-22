@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>아재 절단기: 울티메이트 에디션</title>
+    <style>
+        /* 애니메이션 */
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        .apply-shake { animation: shake 0.4s; }
+
+        body { background-color: #050505; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Malgun Gothic', sans-serif; overflow: hidden; }
+
+        /* 좌측 히스토리 */
+        #history-panel { position: absolute; left: 30px; top: 30px; bottom: 30px; width: 350px; background: rgba(30, 30, 30, 0.9); border: 2px solid #333; border-radius: 15px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+        .history-item { padding: 20px; border-radius:20px; font-size: 20px; border-left: 10px solid #555; background: #252525; }
+        .history-win { border-left-color: #00ff88; color: #00ff88; }
+        .history-lose { border-left-color: #ff4757; color: #ff4757; }
+
+        /* 메인 메뉴 (화면 전환용) */
+        #main-menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: 0.5s; }
+        .menu-btn { width: 300px; padding: 25px; margin: 10px; font-size: 20px; font-weight: bold; border-radius: 15px; border: 2px solid #444; background: #1a1a1a; color: white; cursor: pointer; transition: 0.3s; }
+        .menu-btn:hover { background: #333; border-color: #00d4ff; box-shadow: 0 0 20px rgba(0,212,255,0.4); }
+
+        /* 상단 모드 표시 및 뒤로가기 */
+        .top-nav { position: absolute; top: 20px; display: flex; gap: 15px; align-items: center; }
+        .back-btn { padding: 5px 15px; background: #444; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 12px; }
+
+        /* 게임 UI 구성을 위한 컨테이너 */
+        .main-container { display: flex; flex-direction: column; align-items: center; }
+        .info-panel { margin-bottom: 20px; text-align: center; background: #1e1e1e; padding: 15px 40px; border-radius: 15px; border: 2px solid #333; width: 450px; }
+        .game-wrapper { display: flex; gap: 20px; margin-bottom: 20px; }
+        .player-box { width: 480px; padding: 20px; border: 4px solid #444; border-radius: 20px; background: #111; }
+        .winner { border-color: #00ff88 !important; box-shadow: 0 0 30px rgba(0, 255, 136, 0.5); }
+        .gauge-container { width: 100%; height: 20px; background: #222; border-radius: 10px; margin: 15px 0; overflow: hidden; }
+        .gauge-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #007bff, #00d4ff); transition: width 0.1s linear; }
+        .key-container { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; min-height: 150px; background: #000; border-radius: 10px; padding: 15px; }
+        .key { width: 50px; height: 65px; background: #fff; color: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 28px; box-shadow: 0 6px #888; }
+        .key.hit { background: #00ff88 !important; transform: translateY(4px); box-shadow: 0 2px #00b360 !important; }
+        .key.fail { background: #ff4757 !important; color: white !important; }
+
+        /* 결과 팝업 */
+        #result-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: #222; padding: 40px; border-radius: 25px; border: 3px solid #00ff88; text-align: center; min-width: 350px; }
+    </style>
+</head>
+<body id="game-body">
+
+    <div id="main-menu">
+        <h1 style="font-size: 40px; color: #ff4757; margin-bottom: 40px;">🎮 아재 절단기 센터</h1>
+        <button class="menu-btn" onclick="enterGame('Normal_8')">일반 아재 절단기 (8키)</button>
+        <button class="menu-btn" style="border-color: #00d4ff;" onclick="enterGame('Loa_Normal')">로아 전용: 노멀 (6키)</button>
+        <button class="menu-btn" style="border-color: #ffca28;" onclick="enterGame('Loa_Hard')">로아 전용: 하드 (6키)</button>
+    </div>
+
+    <div id="history-panel">
+        <h3>📊 대결 기록</h3>
+        <div id="history-list"></div>
+    </div>
+
+    <div id="result-modal">
+        <div class="modal-content">
+            <h1 id="modal-title">결과</h1>
+            <p id="modal-content"></p>
+            <button onclick="closeModal()" style="padding: 12px 50px; background: #00ff88; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">확인</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-nav">
+            <button class="back-btn" onclick="exitToMenu()">🏠 메인메뉴</button>
+            <span id="mode-display" style="font-weight: bold; color: #00d4ff;"></span>
+        </div>
+
+        <div class="info-panel">
+            <h2 id="round-info" style="margin: 0;">준비 완료</h2>
+            <div id="live-stats" style="font-size: 20px; color: #00d4ff; margin: 10px 0; font-weight: bold;">0.0s</div>
+            <div id="ai-brain-status" style="color: #ffca28; font-size: 14px;">상대 대기 중</div>
+        </div>
+
+        <div class="game-wrapper">
+            <div id="user-side" class="player-box">
+                <h3 style="text-align: center; margin-top: 0;">USER</h3>
+                <div class="gauge-container"><div id="user-gauge" class="gauge-fill"></div></div>
+                <div id="user-keys" class="key-container"></div>
+            </div>
+            <div id="ai-side" class="player-box">
+                <h3 style="text-align: center; margin-top: 0;">AI</h3>
+                <div class="gauge-container"><div id="ai-gauge" class="gauge-fill"></div></div>
+                <div id="ai-keys" class="key-container"></div>
+            </div>
+        </div>
+        <button id="start-btn" style="padding: 18px 70px; font-size: 22px; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold;" onclick="initGame()">대결 시작!</button>
+    </div>
+
+    <script>
+        const keySets = {
+            'Normal_8': ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F'],
+            'Loa': ['Q', 'W', 'E', 'A', 'S', 'D']
+        };
+
+        let currentMode = '';
+        let gameActive = false, uIdx = 0, aIdx = 0, gameKeys = [];
+        let timer, maxTime, gameInterval, currentAI;
+
+        function enterGame(mode) {
+            currentMode = mode;
+            document.getElementById('main-menu').style.top = '-100%'; // 메뉴 위로 치우기
+            document.getElementById('mode-display').innerText = `모드: ${mode.replace('_', ' ')}`;
+            resetBoard();
+        }
+
+        function exitToMenu() {
+            if (gameActive) return;
+            document.getElementById('main-menu').style.top = '0';
+        }
+
+        function resetBoard() {
+            document.getElementById('user-keys').innerHTML = '';
+            document.getElementById('ai-keys').innerHTML = '';
+            document.getElementById('live-stats').innerText = "준비 완료";
+            document.querySelectorAll('.player-box').forEach(b => b.classList.remove('winner'));
+        }
+
+        function initGame() {
+            if (gameActive) return;
+            document.getElementById('result-modal').style.display = 'none';
+
+            // AI 난이도 결정
+            const brainPower = Math.random();
+            let aiBaseSpeed;
+            if (brainPower < 0.2) { aiBaseSpeed = 1000; currentAI = "나무늘보"; }
+            else if (brainPower < 0.5) { aiBaseSpeed = 650; currentAI = "아재"; }
+            else if (brainPower < 0.8) { aiBaseSpeed = 350; currentAI = "일반인"; }
+            else { aiBaseSpeed = 190; currentAI = "터미네이터"; }
+
+            // 모드별 시간/키 개수 설정
+            let keyList = currentMode.startsWith('Loa') ? keySets['Loa'] : keySets['Normal_8'];
+            let keyCount = currentMode.startsWith('Loa') ? (Math.floor(Math.random() * 3) + 7) : (Math.floor(Math.random() * 5) + 8);
+            
+            if (currentMode === 'Loa_Normal') {
+                maxTime = (Math.floor(Math.random() * 61) / 10 + 4).toFixed(1); // 4~10초
+            } else if (currentMode === 'Loa_Hard') {
+                maxTime = (Math.floor(Math.random() * 50) / 10 + 2).toFixed(1); // 2~7초
+            } else {
+                maxTime = (Math.floor(Math.random() * 61) / 10 + 4).toFixed(1); // 일반 8키 (4~10초)
+            }
+
+            gameActive = true; uIdx = 0; aIdx = 0; timer = maxTime;
+            gameKeys = Array.from({length: keyCount}, () => keyList[Math.floor(Math.random() * keyList.length)]);
+            
+            resetBoard();
+            document.getElementById('round-info').innerText = `${maxTime}s / ${keyCount}Keys`;
+            document.getElementById('ai-brain-status').innerText = `상대: ${currentAI} AI`;
+            gameKeys.forEach(k => { addKey('user-keys', k); addKey('ai-keys', k); });
+
+            gameInterval = setInterval(() => {
+                timer -= 0.1;
+                const p = Math.max(0, (timer / maxTime) * 100);
+                document.getElementById('user-gauge').style.width = p + '%';
+                document.getElementById('ai-gauge').style.width = p + '%';
+                document.getElementById('live-stats').innerText = `⏳ ${Math.max(0, timer).toFixed(1)}s`;
+                if (timer <= 0) finish(null, "시간 초과");
+            }, 100);
+
+            startAI(aiBaseSpeed);
+        }
+
+        function addKey(id, char) {
+            const d = document.createElement('div');
+            d.className = 'key'; d.innerText = char;
+            document.getElementById(id).appendChild(d);
+        }
+
+        window.addEventListener('keydown', e => {
+    if (!gameActive) return;
+    const char = e.key.toUpperCase();
+    let keyList = currentMode.startsWith('Loa') ? keySets['Loa'] : keySets['Normal_8'];
+    
+    if (keyList.includes(char)) {
+        const currentKeyElement = document.getElementById('user-keys').children[uIdx];
+        
+        if (char === gameKeys[uIdx]) {
+            // 맞았을 때: 초록색
+            currentKeyElement.classList.add('hit');
+            uIdx++;
+            if (uIdx === gameKeys.length) finish('user', "성공!");
+        } else {
+            // 틀렸을 때: 화면 흔들기 대신 빨간색 표시
+            if (currentKeyElement) {
+                currentKeyElement.classList.add('fail');
+                // 0.2초 후에 빨간색 제거 (번쩍이는 효과)
+                setTimeout(() => {
+                    currentKeyElement.classList.remove('fail');
+                }, 200);
+            }
+        }
+    }
+});
+
+        function startAI(speed) {
+            if (!gameActive) return;
+            setTimeout(() => {
+                if (!gameActive) return;
+                const aiKeyBox = document.getElementById('ai-keys').children[aIdx];
+                if(aiKeyBox) aiKeyBox.classList.add('hit');
+                aIdx++;
+                if (aIdx === gameKeys.length) finish('ai', "패배...");
+                else startAI(speed);
+            }, speed * (0.8 + Math.random() * 0.4));
+        }
+
+        function finish(winner, title) {
+            gameActive = false;
+            clearInterval(gameInterval);
+            const remTime = Math.max(0, timer).toFixed(1);
+            
+            // --- 기록창 추가 로직 (요청하신 양식으로 수정) ---
+            const historyList = document.getElementById('history-list');
+            const item = document.createElement('div');
+            item.className = `history-item ${winner === 'user' ? 'history-win' : 'history-lose'}`;
+            
+            // 모드 이름 예쁘게 출력
+            const modeName = currentMode === 'Normal_8' ? '일반8키' : (currentMode === 'Loa_Normal' ? '로아:노멀' : '로아:하드');
+            const winStatus = winner === 'user' ? '성공' : '실패';
+
+            item.innerHTML = `
+                <b>[${modeName}]</b> ${winStatus} vs ${currentAI}<br>
+                시간: ${maxTime}s (남은: ${remTime}s)<br>
+                입력: ${uIdx}/${gameKeys.length}
+            `;
+            historyList.prepend(item); 
+            // ----------------------------------------------
+
+            // 결과 팝업 설정
+            const mTitle = document.getElementById('modal-title');
+            const mContent = document.getElementById('modal-content');
+            
+            mTitle.innerText = winner === 'user' ? "🎉 " + title : "💀 " + title;
+            mTitle.style.color = winner === 'user' ? "#00ff88" : "#ff4757";
+            mContent.innerHTML = `
+                상대: ${currentAI} AI<br>
+                기록: ${uIdx}/${gameKeys.length} 입력 완료<br>
+                남은 시간: ${remTime}초
+            `;
+            
+            document.getElementById('result-modal').style.display = 'flex';
+            if (winner) document.getElementById(`${winner}-side`).classList.add('winner');
+        }       
+         function closeModal() { document.getElementById('result-modal').style.display = 'none'; }
+    </script>
+</body>
