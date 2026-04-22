@@ -171,28 +171,26 @@
             document.getElementById(id).appendChild(d);
         }
 
-       window.addEventListener('keydown', e => {
-    // 1. 브라우저 및 확장 프로그램의 간섭 차단 (중요!)
-    // 키보드 위치값(KeyA, KeyS 등)을 직접 체크해서 브라우저가 가로채지 못하게 합니다.
-    if(["KeyQ", "KeyW", "KeyE", "KeyR", "KeyA", "KeyS", "KeyD", "KeyF", "Space"].includes(e.code)) {
-        e.preventDefault(); 
+      window.addEventListener('keydown', e => {
+    // 1. 브라우저가 A, S, D 등을 단축키로 쓰지 못하게 '강력 방어'
+    const gameCodes = ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyA", "KeyS", "KeyD", "KeyF"];
+    if (gameCodes.includes(e.code)) {
+        e.preventDefault(); // 브라우저나 확장 프로그램의 기본 동작을 막습니다.
     }
 
     if (!gameActive) return;
 
-    // 2. 한/영 상태에 무관하게 '물리적 위치'로 키 인식하기
-    // e.key 대신 e.code를 사용하면 'ㅁ'을 누르든 'A'를 누르든 똑같이 'KeyA'로 인식합니다.
+    // 2. 물리적 위치(e.code)로 키 매핑 (한/영 상관없음)
     const codeMap = {
         'KeyQ': 'Q', 'KeyW': 'W', 'KeyE': 'E', 'KeyR': 'R',
         'KeyA': 'A', 'KeyS': 'S', 'KeyD': 'D', 'KeyF': 'F'
     };
-    
-    const char = codeMap[e.code]; // 누른 키의 물리적 위치를 문자로 변환
+
+    const char = codeMap[e.code];
     let keyList = currentMode.startsWith('Loa') ? keySets['Loa'] : keySets['Normal_8'];
-    
+
     if (char && keyList.includes(char)) {
         const currentKeyElement = document.getElementById('user-keys').children[uIdx];
-        
         if (char === gameKeys[uIdx]) {
             currentKeyElement.classList.add('hit');
             uIdx++;
@@ -200,13 +198,11 @@
         } else {
             if (currentKeyElement) {
                 currentKeyElement.classList.add('fail');
-                setTimeout(() => {
-                    currentKeyElement.classList.remove('fail');
-                }, 200);
+                setTimeout(() => { currentKeyElement.classList.remove('fail'); }, 200);
             }
         }
     }
-}, false);
+}, true); // 마지막 인자를 true로 주면 더 강력하게 키를 먼저 가로챕니다.
 
         function startAI(speed) {
             if (!gameActive) return;
